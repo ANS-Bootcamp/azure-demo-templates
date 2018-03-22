@@ -1,0 +1,7 @@
+{
+  "itemDisplayName": "Deploy a Windows VM Scale Set with a Custom Script Extension",
+  "description": "This template allows you to deploy a VM Scale Set of Windows VM",
+  "summary": "This template deploys a Windows VM Scale Set with custom script extension behind a load balancer",
+  "githubUsername": "nathanguk",
+  "dateUpdated": "2018-02-20"
+}

@@ -1,0 +1,154 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the function app that you wish to create."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify Exisitng Storage Account Name"
+            }
+        }
+    },
+    "variables": {
+        "functionAppName": "[concat('azure-middleware-',parameters('name'))]",
+        "hostingPlanName": "[concat(variables('functionAppName'),'-consplan')]",
+        "storageaccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', parameters('storageaccountName'))]",
+        "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function.git",
+        "branch": "master",
+        "computerVisionName": "computer-vision-api",
+        "computerVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('computerVisionName'))]",
+        "faceVisionName": "computer-vision-face-api",
+        "faceVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('faceVisionName'))]",
+        "cognitiveServicesLocation": "westeurope",
+        "SKU": "F0"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2015-04-01",
+            "name": "[variables('hostingPlanName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "name": "[variables('hostingPlanName')]",
+                "computeMode": "Dynamic",
+                "sku": "Dynamic"
+            }
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "type": "Microsoft.Web/sites",
+            "name": "[variables('functionAppName')]",
+            "location": "[resourceGroup().location]",
+            "kind": "functionapp",            
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+            ],
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "AzureWebJobsDashboard",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(variables('storageaccountid'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(variables('storageaccountid'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(variables('storageaccountid'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~1"
+                        },
+                        {
+                            "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                            "value": "6.5.0"
+                        },
+                        {
+                            "name": "AZURE_STORAGE_ACCOUNT",
+                            "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                            "name": "AZURE_STORAGE_ACCESS_KEY",
+                            "value": "[listKeys(variables('storageaccountid'),'2016-12-01').keys[0].value]"
+                        },
+                        {
+                            "name": "AZURE_COMPUTER_VISION_KEY",
+                            "value": "[listKeys(variables('computerVisionid'),'2017-04-18').key1]"
+                        },
+                        {
+                            "name": "AZURE_COMPUTER_VISION_FACE_KEY",
+                            "value": "[listKeys(variables('faceVisionid'),'2017-04-18').key1]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2015-08-01",
+                    "name": "web",
+                    "type": "sourcecontrols",
+                    "dependsOn": [
+                      "[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]"
+                    ],
+                    "properties": {
+                      "RepoUrl": "[variables('repoUrl')]",
+                      "branch": "[variables('branch')]",
+                      "IsManualIntegration": true
+                    }
+                }
+            ]         
+        },
+        {
+            "type": "Microsoft.CognitiveServices/accounts",
+            "sku": {
+              "name": "[variables('SKU')]"
+            },
+            "kind": "ComputerVision",
+            "name": "[variables('computerVisionName')]",
+            "apiVersion": "2017-04-18",
+            "location": "[variables('cognitiveServicesLocation')]",
+            "properties": {},
+            "dependsOn": []
+          },
+          {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "sku": {
+                "name": "[variables('SKU')]"
+              },
+              "kind": "Face",
+              "name": "[variables('faceVisionName')]",
+              "apiVersion": "2017-04-18",
+              "location": "[variables('cognitiveServicesLocation')]",
+              "properties": {},
+              "dependsOn": []
+          }
+    ],
+    "outputs": {
+        "computerVisionKey": {
+          "type": "string",
+          "value": "[listKeys(variables('computerVisionid'),'2017-04-18').key1]"
+        },
+        "computerVisionEndpoint": {
+          "type": "string",
+          "value": "[reference(variables('computerVisionid'),'2017-04-18').endpoint]"
+        },
+        "faceVisionidkey": {
+          "type": "string",
+          "value": "[listKeys(variables('faceVisionid'),'2017-04-18').key1]"
+        },
+        "faceVisionidEndpoint": {
+            "type": "string",
+            "value": "[reference(variables('faceVisionid'),'2017-04-18').endpoint]"
+        }
+      }
+}
