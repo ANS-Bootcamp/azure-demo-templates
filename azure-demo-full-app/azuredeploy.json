@@ -53,7 +53,7 @@
       "adminUsername": "[concat('app-', parameters('name'))]",
       "instanceCount": 2,
       "scriptLocation": "https://raw.githubusercontent.com/ans-bootcamp/azure-demo-scale-set-linux/master/scripts/azure-demo-scale-set.sh",
-      "script": "azure-demo-scale-set.sh",
+      "script": "azure-demo-scale-set.sh"
     },
     "resources": [
       {
