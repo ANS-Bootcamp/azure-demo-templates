@@ -25,7 +25,7 @@
         "computerVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('computerVisionName'))]",
         "faceVisionName": "computer-vision-face-api",
         "faceVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('faceVisionName'))]",
-        "cognitiveServicesLocation": "westeurope",
+        "cognitiveServicesLocation": "[resourceGroup().location]",
         "SKU": "F0"
     },
     "resources": [
@@ -88,6 +88,10 @@
                         {
                             "name": "AZURE_COMPUTER_VISION_FACE_KEY",
                             "value": "[listKeys(variables('faceVisionid'),'2017-04-18').key1]"
+                        },
+                        {
+                            "name": "AZURE_COMPUTER_VISION_REGION",
+                            "value": "[resourceGroup().location]"
                         }
                     ]
                 }
