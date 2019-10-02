@@ -1,0 +1,521 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string",
+            "metadata": {
+              "description": "Your First Name"
+            },
+            "maxLength": 10
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+              "description": "Admin password on all VMs."
+            }
+        }
+    },
+    "variables": {
+      "storageAccountName": "[concat(parameters('name'), uniquestring(resourceGroup().id))]",
+      "storageAccountType": "Standard_LRS",
+      "webSiteName": "[concat('azure-fileupload-', parameters('name'))]",
+      "hostingPlanName": "[concat(variables('webSiteName'), '-srvcplan')]",
+      "location": "[resourceGroup().location]",
+      "skuTier": "Standard",
+      "skuName": "S1",
+      "workerSize": "0",
+      "hostingEnvironment": "",
+      "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-fileuploader.git",
+      "branch": "master",
+      "functionAppName": "[concat('azure-middleware-',parameters('name'))]",
+      "functionHostingPlanName": "[concat(variables('functionAppName'),'-consplan')]",
+      "functionrepoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function.git",
+      "functionbranch": "master",
+      "computerVisionName": "computer-vision-api",
+      "computerVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('computerVisionName'))]",
+      "faceVisionName": "computer-vision-face-api",
+      "faceVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('faceVisionName'))]",
+      "cognitiveServicesLocation": "[resourceGroup().location]",
+      "SKU": "F0",
+      "vnetName": "vnet",
+      "subnetName": "subnet",
+      "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
+      "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]",
+      "publicIPAddressName": "pip",
+      "loadBalancerName": "loadBalancer",
+      "loadBalancerFrontEndName": "loadBalancerFrontEnd",
+      "loadBalancerBackEndName": "loadBalancerBackEnd",
+      "loadBalancerProbeName": "loadBalancerHttpProbe",
+      "loadBalancerNatPoolName": "loadBalancerSshNatPool",
+      "vmSku": "Standard_D1_v2",
+      "vmssName": "[concat('azure-', parameters('name'))]",
+      "adminUsername": "[concat('app-', parameters('name'))]",
+      "instanceCount": 2,
+      "scriptLocation": "https://raw.githubusercontent.com/ans-bootcamp/azure-demo-scale-set-linux/master/scripts/azure-demo-scale-set.sh",
+      "script": "azure-demo-scale-set.sh"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "[variables('storageAccountName')]",
+        "apiVersion": "2017-10-01",
+        "location": "[resourceGroup().location]",
+        "sku": {
+            "name": "[variables('storageAccountType')]"
+        },
+        "kind": "StorageV2", 
+        "properties": {
+        }
+      },
+      {
+        "apiVersion": "2016-09-01",
+        "name": "[variables('hostingPlanName')]",
+        "type": "Microsoft.Web/serverfarms",
+        "location": "[variables('location')]",
+        "properties": {
+            "name": "[variables('hostingPlanName')]",
+            "workerSizeId": "[variables('workerSize')]",
+            "reserved": false,
+            "numberOfWorkers": "1",
+            "hostingEnvironment": "[variables('hostingEnvironment')]"
+        },
+        "sku": {
+            "Tier": "[variables('skuTier')]",
+            "Name": "[variables('skuName')]"
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ]
+    },
+    {
+        "apiVersion": "2016-08-01",
+        "name": "[variables('webSiteName')]",
+        "type": "Microsoft.Web/sites",
+        "properties": {
+            "name": "[variables('webSiteName')]",
+            "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+            "hostingEnvironment": "[variables('hostingEnvironment')]"
+        },
+        "location": "[variables('location')]",
+        "resources": [
+            {
+                "apiVersion": "2016-08-01",
+                "name": "web",
+                "type": "sourcecontrols",
+                "dependsOn": [
+                  "[resourceId('Microsoft.Web/Sites', variables('webSiteName'))]",
+                  "[concat('Microsoft.Web/Sites/', variables('webSiteName'), '/config/appsettings')]"
+                ],
+                "properties": {
+                  "RepoUrl": "[variables('repoUrl')]",
+                  "branch": "[variables('branch')]",
+                  "IsManualIntegration": true
+                }
+              },
+              {
+                "apiVersion": "2016-08-01",
+                "name": "appsettings",
+                "type": "config",
+                "dependsOn": [
+                  "[resourceId('Microsoft.Web/Sites', variables('webSiteName'))]"
+                ],
+                "properties": {
+                  "WEBSITE_NODE_DEFAULT_VERSION": "6.9.1",
+                  "AZURE_STORAGE_ACCOUNT": "[variables('storageAccountName')]",
+                  "AZURE_STORAGE_ACCESS_KEY": "[listKeys(variables('storageAccountName'), '2016-12-01').keys[0].value]"
+                }
+              }
+        ],
+        "dependsOn": [
+            "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]"
+        ]     
+    },
+    {
+        "type": "Microsoft.Web/serverfarms",
+        "apiVersion": "2015-04-01",
+        "name": "[variables('functionHostingPlanName')]",
+        "location": "[resourceGroup().location]",
+        "properties": {
+            "name": "[variables('functionHostingPlanName')]",
+            "computeMode": "Dynamic",
+            "sku": "Dynamic"
+        }
+    },
+    {
+        "apiVersion": "2015-08-01",
+        "type": "Microsoft.Web/sites",
+        "name": "[variables('functionAppName')]",
+        "location": "[resourceGroup().location]",
+        "kind": "functionapp",            
+        "dependsOn": [
+            "[resourceId('Microsoft.Web/serverfarms', variables('functionHostingPlanName'))]"
+        ],
+        "properties": {
+            "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionHostingPlanName'))]",
+            "siteConfig": {
+                "appSettings": [
+                    {
+                        "name": "AzureWebJobsDashboard",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                    },
+                    {
+                        "name": "AzureWebJobsStorage",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                    },
+                    {
+                        "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                    },
+                    {
+                        "name": "FUNCTIONS_EXTENSION_VERSION",
+                        "value": "~1"
+                    },
+                    {
+                        "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                        "value": "6.5.0"
+                    },
+                    {
+                        "name": "AZURE_STORAGE_ACCOUNT",
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    {
+                        "name": "AZURE_STORAGE_ACCESS_KEY",
+                        "value": "[listKeys(variables('storageAccountName'),'2016-12-01').keys[0].value]"
+                    },
+                    {
+                        "name": "AZURE_COMPUTER_VISION_KEY",
+                        "value": "[listKeys(variables('computerVisionid'),'2017-04-18').key1]"
+                    },
+                    {
+                        "name": "AZURE_COMPUTER_VISION_FACE_KEY",
+                        "value": "[listKeys(variables('faceVisionid'),'2017-04-18').key1]"
+                    },
+                    {
+                        "name": "AZURE_COMPUTER_VISION_REGION",
+                        "value": "[resourceGroup().location]"
+                    }
+                ]
+            }
+        },
+        "resources": [
+            {
+                "apiVersion": "2015-08-01",
+                "name": "web",
+                "type": "sourcecontrols",
+                "dependsOn": [
+                  "[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]"
+                ],
+                "properties": {
+                  "RepoUrl": "[variables('functionRepoUrl')]",
+                  "branch": "[variables('functionBranch')]",
+                  "IsManualIntegration": true
+                }
+            }
+        ]         
+    },
+    {
+        "type": "Microsoft.CognitiveServices/accounts",
+        "sku": {
+          "name": "[variables('SKU')]"
+        },
+        "kind": "ComputerVision",
+        "name": "[variables('computerVisionName')]",
+        "apiVersion": "2017-04-18",
+        "location": "[variables('cognitiveServicesLocation')]",
+        "properties": {},
+        "dependsOn": []
+    },
+    {
+          "type": "Microsoft.CognitiveServices/accounts",
+          "sku": {
+            "name": "[variables('SKU')]"
+          },
+          "kind": "Face",
+          "name": "[variables('faceVisionName')]",
+          "apiVersion": "2017-04-18",
+          "location": "[variables('cognitiveServicesLocation')]",
+          "properties": {},
+          "dependsOn": []
+    },
+    {
+        "type": "Microsoft.Compute/virtualMachineScaleSets",
+        "name": "[variables('vmssName')]",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-03-30",
+        "dependsOn": [
+            "[concat('Microsoft.Network/virtualNetworks/', variables('vnetName'))]",
+            "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ],
+        "sku": {
+            "name": "[variables('vmSku')]",
+            "capacity": "[variables('instanceCount')]"
+        },
+        "properties": {
+            "overprovision": true,
+            "upgradePolicy": {
+            "mode": "Automatic"
+            },
+            "virtualMachineProfile": {
+            "storageProfile": {
+                "osDisk": {
+                "createOption": "FromImage",
+                "caching": "ReadWrite"
+                },
+                "imageReference": {
+                "publisher": "Canonical",
+                "offer": "UbuntuServer",
+                "sku": "16.04-LTS",
+                "version": "latest"
+                }
+            },
+            "osProfile": {
+                "computerNamePrefix": "[parameters('name')]",
+                "adminUsername": "[variables('adminUsername')]",
+                "adminPassword": "[parameters('adminPassword')]"
+            },
+            "networkProfile": {
+                "networkInterfaceConfigurations": [
+                {
+                    "name": "nic",
+                    "properties": {
+                    "primary": true,
+                    "ipConfigurations": [
+                        {
+                        "name": "ipconfig",
+                        "properties": {
+                            "subnet": {
+                            "id": "[variables('subnetRef')]"
+                            },
+                            "loadBalancerBackendAddressPools": [
+                            {
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/backendAddressPools/', variables('loadBalancerBackEndName'))]"
+                            }
+                            ],
+                            "loadBalancerInboundNatPools": [
+                            {
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('loadBalancerName'), '/inboundNatPools/', variables('loadBalancerNatPoolName'))]"
+                            }
+                            ]
+                        }
+                        }
+                    ]
+                    }
+                }
+                ]
+            },
+            "extensionProfile": {
+                "extensions": [
+                {
+                    "name": "GalleryApp",
+                    "properties": {
+                    "publisher": "Microsoft.Azure.Extensions",
+                    "settings": {
+                        "fileUris": [
+                        "[variables('scriptLocation')]"
+                        ]
+                    },
+                    "typeHandlerVersion": "2.0",
+                    "autoUpgradeMinorVersion": true,
+                    "protectedSettings": {
+                        "commandToExecute": "[concat ('./', variables('script'), ' ', ' ', variables('storageAccountName'),' ', listKeys(variables('storageAccountName'),'2016-12-01').keys[0].value,' ', variables('adminUsername'))]"  
+                    },
+                    "type": "CustomScript"
+                    }
+                }
+                ]
+            }
+            }
+        }
+    },
+    {
+        "type": "Microsoft.Network/virtualNetworks",
+        "name": "[variables('vnetName')]",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-06-01",
+        "properties": {
+            "addressSpace": {
+            "addressPrefixes": [
+                "10.0.0.0/16"
+            ]
+            },
+            "subnets": [
+            {
+                "name": "[variables('subnetName')]",
+                "properties": {
+                "addressPrefix": "10.0.0.0/24"
+                }
+            }
+            ]
+        }
+    },
+    {
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[variables('publicIPAddressName')]",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-06-01",
+        "properties": {
+            "publicIPAllocationMethod": "Dynamic",
+            "dnsSettings": {
+            "domainNameLabel": "[toLower(variables('vmssName'))]"
+            }
+        }
+    },
+    {
+        "type": "Microsoft.Network/loadBalancers",
+        "name": "[variables('loadBalancerName')]",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-06-01",
+        "dependsOn": [
+            "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+        ],
+        "properties": {
+            "frontendIPConfigurations": [
+            {
+                "name": "[variables('loadBalancerFrontEndName')]",
+                "properties": {
+                "publicIPAddress": {
+                    "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+                }
+                }
+            }
+            ],
+            "backendAddressPools": [
+            {
+                "name": "[variables('loadBalancerBackendName')]"
+            }
+            ],
+            "loadBalancingRules": [
+            {
+                "name": "roundRobinLBRule",
+                "properties": {
+                "frontendIPConfiguration": {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '/frontendIPConfigurations/', variables('loadBalancerFrontEndName'))]"
+                },
+                "backendAddressPool": {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '/backendAddressPools/', variables('loadBalancerBackendName'))]"
+                },
+                "protocol": "Tcp",
+                "frontendPort": 80,
+                "backendPort": 80,
+                "enableFloatingIP": false,
+                "idleTimeoutInMinutes": 5,
+                "probe": {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '/probes/', variables('loadBalancerProbeName'))]"
+                }
+                }
+            }
+            ],
+            "probes": [
+            {
+                "name": "[variables('loadBalancerProbeName')]",
+                "properties": {
+                "protocol": "Http",
+                "port": 80,
+                "requestPath": "/health.html",
+                "intervalInSeconds": 5,
+                "numberOfProbes": 2
+                }
+            }
+            ],
+            "inboundNatPools": [
+            {
+                "name": "[variables('loadBalancerNatPoolName')]",
+                "properties": {
+                "frontendIPConfiguration": {
+                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '/frontendIPConfigurations/', variables('loadBalancerFrontEndName'))]"
+                },
+                "protocol": "Tcp",
+                "frontendPortRangeStart": 50000,
+                "frontendPortRangeEnd": 50019,
+                "backendPort": 22
+                }
+            }
+            ]
+        }
+    },
+    {
+        "type": "Microsoft.Insights/autoscaleSettings",
+        "apiVersion": "2015-04-01",
+        "name": "autoscalehost",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachineScaleSets/', variables('vmSSName'))]"
+        ],
+        "properties": {
+            "name": "autoscalehost",
+            "targetResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('vmSSName'))]",
+            "enabled": true,
+            "profiles": [
+            {
+                "name": "Profile1",
+                "capacity": {
+                "minimum": "2",
+                "maximum": "4",
+                "default": "2"
+                },
+                "rules": [
+                {
+                    "metricTrigger": {
+                    "metricName": "Percentage CPU",
+                    "metricNamespace": "",
+                    "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('vmSSName'))]",
+                    "timeGrain": "PT1M",
+                    "statistic": "Average",
+                    "timeWindow": "PT5M",
+                    "timeAggregation": "Average",
+                    "operator": "GreaterThan",
+                    "threshold": 50
+                    },
+                    "scaleAction": {
+                    "direction": "Increase",
+                    "type": "ChangeCount",
+                    "value": "1",
+                    "cooldown": "PT15M"
+                    }
+                },
+                {
+                    "metricTrigger": {
+                    "metricName": "Percentage CPU",
+                    "metricNamespace": "",
+                    "metricResourceUri": "[concat('/subscriptions/',subscription().subscriptionId, '/resourceGroups/',  resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/', variables('vmSSName'))]",
+                    "timeGrain": "PT1M",
+                    "statistic": "Average",
+                    "timeWindow": "PT5M",
+                    "timeAggregation": "Average",
+                    "operator": "LessThan",
+                    "threshold": 30
+                    },
+                    "scaleAction": {
+                    "direction": "Decrease",
+                    "type": "ChangeCount",
+                    "value": "1",
+                    "cooldown": "PT15M"
+                    }
+                }
+                ]
+            }
+            ]
+        }
+    }
+],
+    "outputs": {
+        "fileuploadUri": {
+            "type": "string",
+            "value": "[concat('https://', reference(concat('Microsoft.Web/sites/', variables('webSiteName'))).hostnames[0])]"
+        },
+        "galleryUrl": {
+            "type": "string",
+            "value": "[concat('http://', reference(variables('publicIPAddressName')).dnsSettings.fqdn)]"
+          },
+          "vmAdminUsername": {
+            "type": "string",
+            "value": "[variables('adminUsername')]"
+          },
+          "vmAdminPassword": {
+            "type": "string",
+            "value": "[parameters('adminPassword')]"
+          }
+    }
+  }
