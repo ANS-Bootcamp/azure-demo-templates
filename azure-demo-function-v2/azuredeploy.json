@@ -19,14 +19,12 @@
         "functionAppName": "[concat('azure-middleware-',parameters('name'))]",
         "hostingPlanName": "[concat(variables('functionAppName'),'-consplan')]",
         "storageaccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', parameters('storageaccountName'))]",
-        "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function.git",
+        "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function-v2.git",
         "branch": "master",
-        "computerVisionName": "computer-vision-api",
-        "computerVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('computerVisionName'))]",
-        "faceVisionName": "computer-vision-face-api",
-        "faceVisionid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('faceVisionName'))]",
+        "cognitiveServicesName": "cognitive-services-api", 
+        "cognitiveServicesId": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', variables('cognitiveServicesName'))]",
         "cognitiveServicesLocation": "[resourceGroup().location]",
-        "SKU": "F0"
+        "SKU": "S0"
     },
     "resources": [
         {
@@ -67,11 +65,11 @@
                         },
                         {
                             "name": "FUNCTIONS_EXTENSION_VERSION",
-                            "value": "~1"
+                            "value": "~2"
                         },
                         {
                             "name": "WEBSITE_NODE_DEFAULT_VERSION",
-                            "value": "6.5.0"
+                            "value": "10.14.1"
                         },
                         {
                             "name": "AZURE_STORAGE_ACCOUNT",
@@ -82,15 +80,11 @@
                             "value": "[listKeys(variables('storageaccountid'),'2016-12-01').keys[0].value]"
                         },
                         {
-                            "name": "AZURE_COMPUTER_VISION_KEY",
-                            "value": "[listKeys(variables('computerVisionid'),'2017-04-18').key1]"
+                            "name": "AZURE_COGNITIVE_SERVICES_KEY",
+                            "value": "[listKeys(variables('cognitiveServicesId'),'2016-02-01-preview').key1]"
                         },
                         {
-                            "name": "AZURE_COMPUTER_VISION_FACE_KEY",
-                            "value": "[listKeys(variables('faceVisionid'),'2017-04-18').key1]"
-                        },
-                        {
-                            "name": "AZURE_COMPUTER_VISION_REGION",
+                            "name": "AZURE_COGNITIVE_SERVICES_REGION",
                             "value": "[resourceGroup().location]"
                         }
                     ]
@@ -114,45 +108,25 @@
         },
         {
             "type": "Microsoft.CognitiveServices/accounts",
-            "sku": {
-              "name": "[variables('SKU')]"
-            },
-            "kind": "ComputerVision",
-            "name": "[variables('computerVisionName')]",
-            "apiVersion": "2017-04-18",
+            "apiVersion": "2016-02-01-preview",
+            "name": "[variables('cognitiveServicesName')]",
             "location": "[variables('cognitiveServicesLocation')]",
+            "sku": {
+            "name": "[variables('SKU')]"
+            },
+            "kind": "CognitiveServices",
             "properties": {},
             "dependsOn": []
-          },
-          {
-              "type": "Microsoft.CognitiveServices/accounts",
-              "sku": {
-                "name": "[variables('SKU')]"
-              },
-              "kind": "Face",
-              "name": "[variables('faceVisionName')]",
-              "apiVersion": "2017-04-18",
-              "location": "[variables('cognitiveServicesLocation')]",
-              "properties": {},
-              "dependsOn": []
-          }
+        }
     ],
     "outputs": {
-        "computerVisionKey": {
+        "cognitiveServicesKey": {
           "type": "string",
-          "value": "[listKeys(variables('computerVisionid'),'2017-04-18').key1]"
+          "value": "[listKeys(variables('cognitiveServicesId'),'2016-02-01-preview').key1]"
         },
-        "computerVisionEndpoint": {
+        "cognitiveServicesEndpoint": {
           "type": "string",
-          "value": "[reference(variables('computerVisionid'),'2017-04-18').endpoint]"
-        },
-        "faceVisionidkey": {
-          "type": "string",
-          "value": "[listKeys(variables('faceVisionid'),'2017-04-18').key1]"
-        },
-        "faceVisionidEndpoint": {
-            "type": "string",
-            "value": "[reference(variables('faceVisionid'),'2017-04-18').endpoint]"
+          "value": "[listKeys(variables('cognitiveServicesId'),'2016-02-01-preview').endpoint]"
         }
       }
 }
