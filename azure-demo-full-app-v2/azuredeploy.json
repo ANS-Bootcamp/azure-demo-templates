@@ -161,7 +161,10 @@
         ],
         "properties": {
             "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionHostingPlanName'))]",
+            "hostingEnvironment": "",
+            "clientAffinityEnabled": false,            
             "siteConfig": {
+                "alwaysOn": true,
                 "appSettings": [
                     {
                         "name": "AzureWebJobsDashboard",
