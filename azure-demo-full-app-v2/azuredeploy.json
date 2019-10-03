@@ -145,10 +145,7 @@
         "sku": {
             "Tier": "[variables('skuTier')]",
             "Name": "[variables('skuName')]"
-        },
-        "dependsOn": [
-            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-        ]
+        }
     },
     {
         "apiVersion": "2015-08-01",
