@@ -23,6 +23,7 @@
         "skuName": "S1",
         "workerSize": "0",
         "hostingEnvironment": "",
+        "webcontentshare": "[concat(parameters('name'), uniquestring(resourceGroup().id))]",
         "storageaccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
         "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function-v2.git",
         "branch": "master",
@@ -77,6 +78,10 @@
                         {
                             "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
                             "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(variables('storageaccountid'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTSHARE",
+                            "value": "[variables('webcontentshare')]"
                         },
                         {
                             "name": "FUNCTIONS_EXTENSION_VERSION",

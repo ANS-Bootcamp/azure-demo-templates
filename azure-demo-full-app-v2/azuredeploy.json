@@ -26,6 +26,7 @@
       "skuName": "S1",
       "workerSize": "0",
       "hostingEnvironment": "",
+      "webcontentshare": "[concat(parameters('name'), uniquestring(resourceGroup().id))]",
       "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-fileuploader.git",
       "branch": "master",
       "functionAppName": "[concat('azure-middleware-',parameters('name'))]",
@@ -170,6 +171,10 @@
                     {
                         "name": "AzureWebJobsStorage",
                         "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'),'2016-12-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                    },
+                    {
+                        "name": "WEBSITE_CONTENTSHARE",
+                        "value": "[variables('webcontentshare')]"
                     },
                     {
                         "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
