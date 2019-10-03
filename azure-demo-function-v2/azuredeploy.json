@@ -17,7 +17,12 @@
     },
     "variables": {
         "functionAppName": "[concat('azure-middleware-',parameters('name'))]",
-        "hostingPlanName": "[concat(variables('functionAppName'),'-consplan')]",
+        "hostingPlanName": "[concat(variables('functionAppName'), '-srvcplan')]",
+        "location": "[resourceGroup().location]",
+        "skuTier": "Standard",
+        "skuName": "S1",
+        "workerSize": "0",
+        "hostingEnvironment": "",
         "storageaccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', parameters('storageaccountName'))]",
         "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function-v2.git",
         "branch": "master",
@@ -28,15 +33,24 @@
     },
     "resources": [
         {
-            "type": "Microsoft.Web/serverfarms",
-            "apiVersion": "2015-04-01",
+            "apiVersion": "2016-09-01",
             "name": "[variables('hostingPlanName')]",
-            "location": "[resourceGroup().location]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[variables('location')]",
             "properties": {
                 "name": "[variables('hostingPlanName')]",
-                "computeMode": "Dynamic",
-                "sku": "Dynamic"
-            }
+                "workerSizeId": "[variables('workerSize')]",
+                "reserved": false,
+                "numberOfWorkers": "1",
+                "hostingEnvironment": "[variables('hostingEnvironment')]"
+            },
+            "sku": {
+                "Tier": "[variables('skuTier')]",
+                "Name": "[variables('skuName')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageaccountName'))]"
+            ]
         },
         {
             "apiVersion": "2015-08-01",

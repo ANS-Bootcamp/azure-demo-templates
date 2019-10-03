@@ -29,7 +29,7 @@
       "repoUrl": "https://github.com/ANS-Bootcamp/azure-demo-fileuploader.git",
       "branch": "master",
       "functionAppName": "[concat('azure-middleware-',parameters('name'))]",
-      "functionHostingPlanName": "[concat(variables('functionAppName'),'-consplan')]",
+      "functionHostingPlanName": "[concat(variables('functionAppName'),'-srvcplan')]",
       "functionrepoUrl": "https://github.com/ANS-Bootcamp/azure-demo-function-v2.git",
       "functionbranch": "master",
       "cognitiveServicesName": "cognitive-services-api", 
@@ -130,15 +130,24 @@
         ]     
     },
     {
-        "type": "Microsoft.Web/serverfarms",
-        "apiVersion": "2015-04-01",
+        "apiVersion": "2016-09-01",
         "name": "[variables('functionHostingPlanName')]",
-        "location": "[resourceGroup().location]",
+        "type": "Microsoft.Web/serverfarms",
+        "location": "[variables('location')]",
         "properties": {
             "name": "[variables('functionHostingPlanName')]",
-            "computeMode": "Dynamic",
-            "sku": "Dynamic"
-        }
+            "workerSizeId": "[variables('workerSize')]",
+            "reserved": false,
+            "numberOfWorkers": "1",
+            "hostingEnvironment": "[variables('hostingEnvironment')]"
+        },
+        "sku": {
+            "Tier": "[variables('skuTier')]",
+            "Name": "[variables('skuName')]"
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ]
     },
     {
         "apiVersion": "2015-08-01",
