@@ -134,6 +134,7 @@
         "name": "[variables('functionHostingPlanName')]",
         "type": "Microsoft.Web/serverfarms",
         "location": "[variables('location')]",
+        "kind": "app",
         "properties": {
             "name": "[variables('functionHostingPlanName')]",
             "workerSizeId": "[variables('workerSize')]",
